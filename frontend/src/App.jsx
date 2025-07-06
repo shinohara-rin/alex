@@ -168,7 +168,8 @@ function App() {
     }
     
     // Create new socket with the URL
-    socket = io(url);
+    const newSocket = io(url);
+    setSocket(newSocket);
     
     // Save URL to localStorage
     localStorage.setItem('backendUrl', url);
@@ -178,21 +179,24 @@ function App() {
     setIsConnected(false);
     
     // Setup event listeners for the new socket
-    setupSocketListeners();
+    setupSocketListeners(newSocket);
   };
   
   // Function to setup socket event listeners
-  const setupSocketListeners = () => {
-    socket.on('connect', () => {
+  const setupSocketListeners = (socketToSetup) => {
+    // Use the passed socket or fall back to the state socket
+    const socketInstance = socketToSetup || socket;
+    
+    socketInstance.on('connect', () => {
       console.log('Connected to server');
       setIsConnected(true);
     });
 
-    socket.on('disconnect', () => {
+    socketInstance.on('disconnect', () => {
       setIsConnected(false);
     });
 
-    socket.on('message', (message) => {
+    socketInstance.on('message', (message) => {
       // Clear typing indicator when message arrives
       setIsTyping(false);
       
@@ -204,16 +208,16 @@ function App() {
       setMessages((prevMessages) => [...prevMessages, message]);
     });
     
-    socket.on('agent_typing', () => {
+    socketInstance.on('agent_typing', () => {
       setIsTyping(true);
     });
     
-    socket.on('agent_status', (status) => {
+    socketInstance.on('agent_status', (status) => {
       setAgentStatus(status);
     });
     
     // Listen for debug information
-    socket.on('debug_info', (data) => {
+    socketInstance.on('debug_info', (data) => {
       console.log('Debug info received:', data);
       setDebugData(data);
     });
@@ -302,6 +306,7 @@ function App() {
         sender: 'user',
         timestamp: Date.now()
       };
+      // Use socket from state safely
       socket.emit('message', message);
       setMessages((prevMessages) => [...prevMessages, message]);
       setInputMessage('');
